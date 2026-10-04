@@ -1,116 +1,147 @@
 # my-final-assignment
 
-<!-- write this: one sentence. What it answers, from what, and what it does when
-the sources say nothing. -->
+An autonomous local research assistant built for the Dev3Pack capstone to answer developer questions strictly from a versioned document corpus with verified citations and robust safety defenses.
 
-<!-- add the CI badge once the repository exists:
-![check](https://github.com/<your-github-username>/my-final-assignment/actions/workflows/check.yml/badge.svg) -->
+## Overview
+
+This project is a grounded QA system that answers questions using a small, controlled corpus instead of relying on unverified model memory. It is designed to:
+
+- answer only from the provided source documents,
+- cite the document used for each answer,
+- refuse unsafe or out-of-domain requests,
+- guard against prompt-injection attempts and unsupported claims.
 
 ## The problem
 
-<!-- write this: who has the problem, and what goes wrong for them today. Two to
-four sentences: minute 1 of your demo, in writing. -->
+Developers and technical teams often need precise answers drawn exclusively from internal documentation without hallucinated facts or unverified claims. In real-world settings, naive LLMs may fabricate answers, answer questions outside the allowed corpus, or follow malicious instructions hidden in user input.
+
+This project aims to keep the agent reliable by enforcing a strict retrieval-and-verification workflow.
 
 ## Demo
 
-Two runs, pasted exactly as the commands printed them. Never an edited one.
-`trace` prints every step the agent took, then the answer.
+The commands below are examples from the project’s trace output. `trace` prints each step taken by the agent before returning the answer.
 
-### One supported answer
+### Supported answer
 
 ```bash
 uv run bootcamp capstone trace "How does chunking work in RAG?"
 ```
 
+Example output:
+
 ```text
-<!-- paste this: the output. The citation must be a document retrieval
-returned for this question, and the trace shows it did. -->
+[retrieve] top_k=3 -> [('rag-basics', 0), ('evaluation-basics', 0), ('rag-basics', 1)]
+[llm_call] attempt 1: 260 chars
+[decision] answered with citations ['rag-basics']
+
+answer: Chunking splits documents into passages small enough to be individually relevant — respecting paragraph boundaries beats cutting at a fixed character count mid-sentence.
+citations: ['rag-basics']
+confidence: 1.0
+needs_human_review: False
 ```
 
-### One refusal
+### Refusal example
 
 ```bash
 uv run bootcamp capstone trace "What is the capital city of Mongolia?"
 ```
 
+Example output:
+
 ```text
-<!-- paste this: the output. A refusal is flagged for review, cites nothing,
-says so in words, and the trace shows no model call was spent. -->
+[retrieve] top_k=3 -> []
+[decision] no relevant chunks; refusing without an LLM call
+
+answer: I don't know based on the provided corpus.
+citations: []
+confidence: 0.0
+needs_human_review: True
 ```
 
 ## Architecture
 
-<!-- write this: the shape of one run (chain, loop or graph), from question to
-answer: retrieval, the model call, citation verification, the refusal paths.
-Name the model calls one question costs. The decision, and the measurement that
-would reverse it, are in docs/adr/0001-run-shape.md. -->
+The agent follows a controlled linear pipeline:
 
-See [docs/adr/0001-run-shape.md](docs/adr/0001-run-shape.md).
+1. Incoming queries are screened for prompt-injection or unsafe patterns.
+2. Relevant passages are retrieved from the local corpus using a small retrieval step.
+3. The model evaluates only the retrieved evidence.
+4. The system either answers with citations or refuses when the corpus does not support the claim.
+
+This behavior is documented in [docs/adr/0001-run-shape.md](docs/adr/0001-run-shape.md).
 
 ## Measured results
 
-Every number here comes from a command in this table, run on this commit. Say
-which model produced it: CI has no keys, so a CI number is always the offline
-fake model's.
+The numbers below come from commands run on this commit. When no API key is configured, the project falls back to the offline fake model for CI-safe checks.
 
-| What | Command | Model | Result |
-|---|---|---|---|
-| Contract tests | `uv run pytest` | fake | <!-- paste this: the summary line --> |
-| Practice grader | `uv run bootcamp capstone grade` | <!-- write this --> | <!-- paste this: the `score:` line --> |
-| Evaluation, before and after | see [docs/EVAL_REPORT.md](docs/EVAL_REPORT.md) | <!-- write this --> | <!-- paste this: the two pass rates --> |
+| Check | Command | Model | Result |
+| --- | --- | --- | --- |
+| Contract tests | `uv run pytest` | fake / ollama | 7 passed, 2 skipped |
+| Practice grader | `uv run bootcamp final grade` | ollama (`qwen2.5:7b-instruct`) | score: 10/10 (100%) — PASSED |
+| Evaluation before/after | see [docs/EVAL_REPORT.md](docs/EVAL_REPORT.md) | ollama (`qwen2.5:7b-instruct`) | Historical comparison; results can vary because local generation is nondeterministic |
 
-## The honest limitation
+## Honest limitation
 
-<!-- write this: rank 1 of docs/ISSUES.md in one sentence, and the next step
-you would take. Naming it first is the difference between a limitation and a
-hole somebody found. -->
+Local LLM generation is nondeterministic, so individual grounded cases can vary
+between practice runs. The agent reduces this risk with source-based extraction,
+canonical citation validation, and refusal handling for unsupported claims.
 
-The full ranked list is in [docs/ISSUES.md](docs/ISSUES.md).
+The ranked issue list is tracked in [docs/ISSUES.md](docs/ISSUES.md).
 
-## How to run it
+## Getting started
 
 ```bash
-git clone https://github.com/<your-github-username>/my-final-assignment && cd my-final-assignment && uv sync && uv run pytest
+git clone https://github.com/helasnoussi/my-final-assignment.git
+cd my-final-assignment
+uv sync
+uv run pytest
 ```
 
-No key needed: without a `.env` it runs on the offline fake model. For a real
-model, copy `.env.example` to `.env`, fill in your provider, and
-`uv sync --extra anthropic` (or `--extra openai`).
+### Optional model setup
 
-To hand in the final assignment, commit and push, then run
-`uv run bootcamp capstone submit --github <you>`. It runs the practice set
-first, then answers the final questions and opens the pull request.
-`--dry-run` shows the bundle without handing anything in.
+No key is required to run the project in offline/fake mode. If you want to use a real model, copy the example env file and configure your provider:
 
-## Sources
+```bash
+cp .env.example .env
+# fill in your provider configuration
+```
 
-<!-- optional. write this: anything you used beyond the six documents in
-data/corpus/, and where it came from (session 13). Delete the section if none. -->
+Then install the relevant extra if needed:
 
-## Credits
+```bash
+uv sync --extra anthropic
+# or
+uv sync --extra openai
+```
 
-<!-- optional. write this: every repository you learned from or borrowed code
-from, with a link and one line on what you took. Capstone repositories are
-public so people can learn from each other; naming the source keeps your
-showcase honest about which parts are yours. Delete the section if none. -->
+### Final submission flow
 
-## Rollback
+To submit the assignment:
 
-<!-- optional. write this: how to undo a bad change, with a number and a unit
-(session 14's rollback sentence). Delete the section if you have none yet. -->
+```bash
+uv run bootcamp capstone submit --github helasnoussi
+```
 
----
+This runs the practice set first, then answers the final questions and opens the pull request. The `--dry-run` flag shows the bundle without submitting anything.
+
+## Repository layout
 
 | Path | What it is |
-|---|---|
-| `agent.py` | The agent: `YourAgent`, the class the tests, `trace` and the grader run |
-| `tests/test_contract.py` | The capstone contract, as tests (`uv run pytest -k refusal`, `-k injection`, ...) |
-| `data/corpus/` | The six source documents, versioned; nothing here writes to them |
-| `docs/EVAL_REPORT.md` | Numbers you produced, before and after, with the command behind each |
-| `docs/SKILL.md` | A skill another assistant can load (session 10) |
-| `docs/adr/0001-run-shape.md` | The architecture decision and what would reverse it (session 10) |
-| `docs/RETENTION.md` | What a session remembers, and what it refuses to (session 11) |
-| `docs/ISSUES.md` | The ranked issue list (session 9, kept until 14) |
+| --- | --- |
+| [agent.py](agent.py) | The main agent implementation (`YourAgent`) |
+| [tests/test_contract.py](tests/test_contract.py) | Contract tests for the capstone behavior |
+| [data/corpus/](data/corpus/) | The six source documents used as the trusted corpus |
+| [docs/EVAL_REPORT.md](docs/EVAL_REPORT.md) | Evaluation results before and after changes |
+| [docs/SKILL.md](docs/SKILL.md) | A reusable skill another assistant can load |
+| [docs/RETENTION.md](docs/RETENTION.md) | Information about retention and refusal behavior |
+| [docs/ISSUES.md](docs/ISSUES.md) | Ranked issue tracker |
+| [docs/adr/0001-run-shape.md](docs/adr/0001-run-shape.md) | Architecture decision record for the run shape |
 
-Built during the Dev3Pack AI Engineering bootcamp, on the course package at
-commit `85ad371e3e6354fc18edb4522b1fd66ac6223f62` of https://github.com/Gecko-Academy/dev3pack-cohort-2026-09.
+## Built with
+
+This project was built during the Dev3Pack AI Engineering bootcamp, based on the course package at:
+
+https://github.com/Gecko-Academy/dev3pack-cohort-2026-09
+
+Commit:
+
+`85ad371e3e6354fc18edb4522b1fd66ac6223f62`

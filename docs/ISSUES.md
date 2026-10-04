@@ -10,12 +10,12 @@ The columns are the three fields `cap01-e5` reads.
 
 | rank | issue | impact |
 |---:|---|---|
-| 1 | <!-- write this: a sentence naming the issue --> | <!-- write this: who it hurts and how badly --> |
-| 2 | <!-- write this --> | <!-- write this --> |
-| 3 | <!-- write this --> | <!-- write this --> |
+| 1 | Local LLM citation drift under strict automated evaluation gates | Hurts the overall evaluation score on grounded questions when the local qwen model formats citations slightly differently than expected. |
+| 2 | Language sensitivity on adversarial refusals and out-of-domain queries | Can occasionally bypass standard refusal language triggers if non-English inputs are not caught early enough by the prompt guard. |
+| 3 | Increased inference latency during sequential local model execution | Slows down the end-to-end response time for multi-step reasoning loops when running locally via Ollama. |
 
 ## Rank 1, in progress
 
-- The fix: <!-- write this (session 14) -->
-- The regression test: <!-- write this: its name in tests/ -->
+- The fix: Refined prompt formatting instructions and structured output parsing to enforce strict passage identifier returns.
+- The regression test: `tests/test_agent.py::test_citation_recall_regression`
 - Before and after: see [EVAL_REPORT.md](EVAL_REPORT.md).
