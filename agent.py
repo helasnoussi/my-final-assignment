@@ -325,6 +325,14 @@ def grounded_answer(
             confidence=answer.confidence,
             needs_human_review=False,
         )
+    elif answer.answer.strip() and not answer.needs_human_review:
+        answer = ResearchAnswer(
+            answer="I don't know based on the provided corpus.",
+            citations=(),
+            confidence=0.0,
+            needs_human_review=True,
+        )
+        trace.append(TraceEvent("decision", "claim support failed; refusing"))
 
     trace.append(TraceEvent("decision", f"answered with citations {list(answer.citations)}"))
     answer = ResearchAnswer(
